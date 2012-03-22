@@ -11,30 +11,31 @@ var hash;
 
 var HashMap = function(size) {
 	this.size = size;
-	this.grid = [];
-	this.keys = [];
+	this.grid = {};
 	this.key = function(obj) {
 		vector = obj.pos;
-		return '' + Math.floor(Math.floor(vector.x/size) * size) + ' ' +
-			    Math.floor(Math.floor(vector.y/size) * size);
+		return '' + Math.floor(vector.x/size) * size + ' ' +
+			    Math.floor(vector.y/size) * size;
 	}
 	
 	this.insert = function(obj) {
 		key = this.key(obj);
-		if (!this.keys[key])
-			this.keys.push(key);
+
 		if (!this.grid[key])
 			this.grid[key] = [];
-		this.grid[key].push(obj);
+		this.grid[key].push(obj.id);
 		//console.log(this.grid[key].length);
-		console.log(hash.size());
+		//console.log(hash.size());
 	}
-	this.remove = function(obj) {
+	this.recalc = function(obj) {
 		key = this.key(obj);
 		cell = this.grid[key];
-		index = cell.indexOf(obj);
-		if (index != -1)
+		if (cell != undefined) {
+			index = cell.indexOf(obj.id);
+			//console.log(index);
 			cell.splice(index, 1);
+		}
+		this.insert(obj);
 	}
 	this.query = function(obj) {
 		return this.grid[this.key(obj)];
@@ -43,6 +44,12 @@ var HashMap = function(size) {
 		var size = 0;
 		for (var key in this.grid)
 			if (this.grid.hasOwnProperty(key)) size++;
+		return size;
+	}
+	this.sumSize = function() {
+		var size = 0;
+		for (var key in this.grid)
+			if (this.grid.hasOwnProperty(key)) size += this.grid[key].length;
 		return size;
 	}
 }
@@ -92,14 +99,13 @@ function Vector(x, y) {
 	}
 }
 
-function Blob(x,y){
-    this.id = ballIdent++;
-    this.size = 8;
+function Blob(x,y, id){
+    this.id = id;
+    this.size = 16;
     this.color = colors[Math.floor(Math.random()*colors.length)];
     this.pos = new Vector(x, y);
     this.v = new Vector(0.0,0.0);
     this.move = function(){
-
         /*for(var i = 0;i<members.length;i++){
             if (members[i].id != this.id){
                 if (collide(this,members[i])) {
@@ -112,10 +118,13 @@ function Blob(x,y){
             }
         }*/
 		
-		//cell = hash.query(this);
-		//for (var blob in cell)
-		//	if (collide(blob, this))
-		//		resolveCollision(blob, this);
+		cell = hash.query(this);
+		if (cell != undefined) {
+			for (var id in cell) {
+				if (collide(members[id], this))
+					resolveCollision(members[id], this);
+			}		
+		}
 
 		/*c = hash.getClosest(this);
 		for (i = 0; i < c.length; i++)
@@ -161,7 +170,7 @@ function Blob(x,y){
 				//console.log(prev.length() - this.v.length());
 		}
 		
-
+		recalc(this);
     }
     this.draw = function(){
         ctx.beginPath();
@@ -239,19 +248,23 @@ window.requestAnimFrame = (function(){
               };
 })();
 
+function recalc(blob) {
+	hash.recalc(blob);
+}
+
+
 function init(){
 	
     canvas = document.getElementById("drawing");
     ctx = canvas.getContext('2d');
 
-	hash = new HashMap(canvas.width / 9);
+	hash = new HashMap(canvas.width / 1);
 	
 	
     i = 40;
     for (i; i > 0; i--) {
-		blob = new Blob(Math.random()*canvas.width*.95 + 16, Math.random()*canvas.height*.95 + 16);
+		blob = new Blob(Math.random()*canvas.width*.95 + 16, Math.random()*canvas.height*.95 + 16, members.length);
 		hash.insert(blob);
-		//console.log(hash.size());
         members.push(blob);
 	}		 
 
@@ -264,7 +277,6 @@ function render(){
     for(var i = 0;i<members.length;i++){
         members[i].move();
         members[i].draw();
-		
     }
 
 }
